@@ -7,6 +7,7 @@ import Card from "@/components/Card";
 import CustomMap from "@/components/CustomMap";
 import EmptyState from "@/components/EmptyState";
 import LineBadge from "@/components/LineBadge";
+import LineRow from "@/components/LineRow";
 import ModeBadge from "@/components/ModeBadge";
 import ModeIcon from "@/components/ModeIcon";
 import { getStopById, SAVED_STOP_IDS_DEFAULT } from "@/data/stops";
@@ -36,11 +37,13 @@ export default function StopDetail() {
   const linesThroughStop = TRANSIT_LINES.filter((l) => l.stopIds.includes(stop.id));
   const [filter, setFilter] = useState<"all" | TransitMode>("all");
   const [saved, setSaved] = useState(false);
+  const [savedLineIds, setSavedLineIds] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
       const savedIds = await getJSON(StorageKeys.savedStops, SAVED_STOP_IDS_DEFAULT);
       setSaved(savedIds.includes(stop.id));
+      setSavedLineIds(await getJSON<string[]>(StorageKeys.savedLines, []));
     })();
   }, [stop.id]);
 
@@ -49,6 +52,13 @@ export default function StopDetail() {
     const next = saved ? savedIds.filter((s) => s !== stop.id) : [...savedIds, stop.id];
     await setJSON(StorageKeys.savedStops, next);
     setSaved(!saved);
+  };
+
+  const toggleSavedLine = async (lineId: string) => {
+    const isSaved = savedLineIds.includes(lineId);
+    const next = isSaved ? savedLineIds.filter((id) => id !== lineId) : [...savedLineIds, lineId];
+    setSavedLineIds(next);
+    await setJSON(StorageKeys.savedLines, next);
   };
 
   const filtered = useMemo(
@@ -186,6 +196,23 @@ export default function StopDetail() {
             ))
           )}
         </View>
+
+        {linesThroughStop.length > 0 && (
+          <View style={styles.list}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+              {t("search.linesSection").toUpperCase()}
+            </Text>
+            {linesThroughStop.map((line) => (
+              <LineRow
+                key={line.id}
+                line={line}
+                saved={savedLineIds.includes(line.id)}
+                onToggleSave={() => toggleSavedLine(line.id)}
+                onPress={() => router.push({ pathname: "/(tabs)/map", params: { lineId: line.id } })}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -262,6 +289,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 16,
     gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    marginBottom: 4,
   },
   departureCard: {},
   departureRow: {

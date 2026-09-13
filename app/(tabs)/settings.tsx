@@ -1,10 +1,12 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Card from "@/components/Card";
 import { LanguageDropdownRow } from "@/components/LanguageSwitcher";
 import ToggleSwitch from "@/components/ToggleSwitch";
+import { SAVED_STOP_IDS_DEFAULT } from "@/data/stops";
 import { ROADMAP } from "@/data/trips";
 import { useLanguage } from "@/i18n/LanguageContext";
 import type { TranslationKey } from "@/i18n/translations";
@@ -90,6 +92,8 @@ export default function Settings() {
   const [notifications, setNotifications] = useState(true);
   const [showStops, setShowStops] = useState(true);
   const [mapFilter, setMapFilter] = useState("all");
+  const [savedStopCount, setSavedStopCount] = useState(0);
+  const [savedLineCount, setSavedLineCount] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -98,6 +102,46 @@ export default function Settings() {
       setMapFilter(await getJSON(StorageKeys.mapFilter, "all"));
     })();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const stopIds = await getJSON(StorageKeys.savedStops, SAVED_STOP_IDS_DEFAULT);
+        setSavedStopCount(stopIds.length);
+        const lineIds = await getJSON<string[]>(StorageKeys.savedLines, []);
+        setSavedLineCount(lineIds.length);
+      })();
+    }, [])
+  );
+
+  const clearSavedData = () => {
+    Alert.alert(t("settings.clearData"), t("settings.clearData.confirm"), [
+      { text: t("settings.cancel"), style: "cancel" },
+      {
+        text: t("settings.clearData.action"),
+        style: "destructive",
+        onPress: async () => {
+          await setJSON(StorageKeys.savedStops, []);
+          await setJSON(StorageKeys.savedLines, []);
+          setSavedStopCount(0);
+          setSavedLineCount(0);
+        },
+      },
+    ]);
+  };
+
+  const replayOnboarding = () => {
+    Alert.alert(t("settings.replayOnboarding"), t("settings.replayOnboarding.confirm"), [
+      { text: t("settings.cancel"), style: "cancel" },
+      {
+        text: t("onboarding.continue"),
+        onPress: async () => {
+          await setJSON(StorageKeys.hasOnboarded, false);
+          router.replace("/onboarding");
+        },
+      },
+    ]);
+  };
 
   const updateNotifications = (next: boolean) => {
     setNotifications(next);
@@ -195,6 +239,35 @@ export default function Settings() {
       </View>
 
       <View style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: colors.textFaint }]}>{t("settings.data").toUpperCase()}</Text>
+        <Card padding={0}>
+          <Pressable onPress={() => router.push("/(tabs)/saved")}>
+            <SettingsRow
+              icon="bookmark-multiple-outline"
+              title={t("settings.savedItems")}
+              subtitle={t("settings.savedItems.sub", { stops: savedStopCount, lines: savedLineCount })}
+              right={<MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />}
+            />
+          </Pressable>
+          <Pressable onPress={replayOnboarding}>
+            <SettingsRow
+              icon="restart"
+              title={t("settings.replayOnboarding")}
+              subtitle={t("settings.replayOnboarding.sub")}
+            />
+          </Pressable>
+          <Pressable onPress={clearSavedData}>
+            <SettingsRow
+              icon="trash-can-outline"
+              title={t("settings.clearData")}
+              subtitle={t("settings.clearData.sub")}
+              isLast
+            />
+          </Pressable>
+        </Card>
+      </View>
+
+      <View style={styles.section}>
         <Text style={[styles.sectionLabel, { color: colors.textFaint }]}>{t("settings.networkData").toUpperCase()}</Text>
         <Card padding={0}>
           <SettingsRow icon="bus" title={t("settings.coverage")} subtitle={t("settings.coverage.sub")} />
@@ -228,6 +301,7 @@ export default function Settings() {
         <Text style={[styles.sectionLabel, { color: colors.textFaint }]}>{t("settings.about").toUpperCase()}</Text>
         <Card padding={0}>
           <SettingsRow icon="information-outline" title={t("settings.aboutPeatu")} subtitle={t("settings.version")} />
+          <SettingsRow icon="shield-check-outline" title={t("settings.privacy")} subtitle={t("settings.privacy.sub")} isLast />
           <View style={styles.aboutBody}>
             <View style={styles.aboutModes}>
               <MaterialCommunityIcons name="bus" size={16} color="#2563EB" />

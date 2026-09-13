@@ -1,44 +1,59 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
 import HeaderGlow from "@/components/HeaderGlow";
+import LineRow from "@/components/LineRow";
 import StopRow from "@/components/StopRow";
 import { SAVED_STOP_IDS_DEFAULT, STOPS } from "@/data/stops";
+import { TRANSIT_LINES } from "@/data/lines";
 import { useLanguage } from "@/i18n/LanguageContext";
-import type { TranslationKey } from "@/i18n/translations";
 import { useTheme } from "@/theme/ThemeContext";
-import type { Stop } from "@/types";
-import { StorageKeys, getJSON } from "@/utils/storage";
+import type { Stop, TransitLine } from "@/types";
+import { StorageKeys, getJSON, setJSON } from "@/utils/storage";
 
-const MODE_INFO: { icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"]; labelKey: TranslationKey; subKey: TranslationKey; tint: string }[] = [
-  { icon: "bus", labelKey: "mode.bus", subKey: "mode.bus.sub", tint: "#3B82F6" },
-  { icon: "train", labelKey: "mode.train", subKey: "mode.train.sub", tint: "#22C55E" },
-  { icon: "tram", labelKey: "mode.tram", subKey: "mode.tram.sub", tint: "#EAB308" },
-  { icon: "tram", labelKey: "mode.trolley", subKey: "mode.trolley.sub", tint: "#EAB308" },
-];
+type Segment = "stops" | "lines";
 
 export default function Saved() {
-  const { colors, mode: themeMode } = useTheme();
+  const { colors } = useTheme();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const [segment, setSegment] = useState<Segment>("stops");
   const [savedStops, setSavedStops] = useState<Stop[]>([]);
+  const [savedLines, setSavedLines] = useState<TransitLine[]>([]);
+
+  const reload = useCallback(async () => {
+    const stopIds = await getJSON(StorageKeys.savedStops, SAVED_STOP_IDS_DEFAULT);
+    setSavedStops(STOPS.filter((s) => stopIds.includes(s.id)));
+    const lineIds = await getJSON<string[]>(StorageKeys.savedLines, []);
+    setSavedLines(TRANSIT_LINES.filter((l) => lineIds.includes(l.id)));
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
-        const ids = await getJSON(StorageKeys.savedStops, SAVED_STOP_IDS_DEFAULT);
-        if (active) setSavedStops(STOPS.filter((s) => ids.includes(s.id)));
+        if (active) await reload();
       })();
       return () => {
         active = false;
       };
-    }, [])
+    }, [reload])
   );
+
+  const unsaveStop = async (stopId: string) => {
+    const ids = await getJSON(StorageKeys.savedStops, SAVED_STOP_IDS_DEFAULT);
+    await setJSON(StorageKeys.savedStops, ids.filter((id) => id !== stopId));
+    setSavedStops((prev) => prev.filter((s) => s.id !== stopId));
+  };
+
+  const unsaveLine = async (lineId: string) => {
+    const ids = await getJSON<string[]>(StorageKeys.savedLines, []);
+    await setJSON(StorageKeys.savedLines, ids.filter((id) => id !== lineId));
+    setSavedLines((prev) => prev.filter((l) => l.id !== lineId));
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -48,36 +63,75 @@ export default function Saved() {
           <View style={[styles.eyebrowPill, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
             <MaterialCommunityIcons name="bookmark" size={12} color={colors.primary} />
             <Text style={[styles.eyebrow, { color: colors.textMuted }]}>
-              {t("saved.stopsCount", { count: savedStops.length })}
+              {t("saved.stopsCount", { count: savedStops.length + savedLines.length })}
             </Text>
           </View>
           <Text style={[styles.title, { color: colors.text }]}>{t("saved.title")}</Text>
           <Text style={[styles.subtitle, { color: colors.textFaint }]}>{t("saved.subtitle")}</Text>
         </View>
 
-        <View style={styles.section}>
-          {savedStops.length === 0 ? (
-            <Card>
-              <EmptyState icon="bookmark-outline" title={t("saved.emptyTitle")} subtitle={t("saved.emptySubtitle")} />
-            </Card>
-          ) : (
-            savedStops.map((s) => <StopRow key={s.id} stop={s} onPress={() => router.push(`/stop/${s.id}`)} />)
-          )}
+        <View style={styles.segmentWrap}>
+          <View style={[styles.segment, { backgroundColor: colors.surfaceAlt }]}>
+            <Pressable
+              onPress={() => setSegment("stops")}
+              style={[styles.segmentBtn, segment === "stops" && { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
+            >
+              <MaterialCommunityIcons
+                name="map-marker"
+                size={15}
+                color={segment === "stops" ? colors.text : colors.textFaint}
+              />
+              <Text style={{ color: segment === "stops" ? colors.text : colors.textFaint, fontWeight: "700", fontSize: 13 }}>
+                {t("search.stopsSection")} · {savedStops.length}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setSegment("lines")}
+              style={[styles.segmentBtn, segment === "lines" && { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
+            >
+              <MaterialCommunityIcons
+                name="vector-polyline"
+                size={15}
+                color={segment === "lines" ? colors.text : colors.textFaint}
+              />
+              <Text style={{ color: segment === "lines" ? colors.text : colors.textFaint, fontWeight: "700", fontSize: 13 }}>
+                {t("search.linesSection")} · {savedLines.length}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t("saved.transitModes")}</Text>
-          <View style={styles.grid}>
-            {MODE_INFO.map((m) => (
-              <Card key={m.labelKey} style={styles.gridCard}>
-                <View style={[styles.gridIcon, { backgroundColor: themeMode === "dark" ? `${m.tint}26` : `${m.tint}14` }]}>
-                  <MaterialCommunityIcons name={m.icon} size={20} color={m.tint} />
-                </View>
-                <Text style={[styles.gridLabel, { color: colors.text }]}>{t(m.labelKey)}</Text>
-                <Text style={[styles.gridSub, { color: colors.textFaint }]}>{t(m.subKey)}</Text>
-              </Card>
-            ))}
-          </View>
+          {segment === "stops" ? (
+            savedStops.length === 0 ? (
+              <EmptyState icon="bookmark-outline" title={t("saved.emptyTitle")} subtitle={t("saved.emptySubtitle")} />
+            ) : (
+              savedStops.map((s) => (
+                <StopRow
+                  key={s.id}
+                  stop={s}
+                  onPress={() => router.push(`/stop/${s.id}`)}
+                  trailing={
+                    <Pressable onPress={() => unsaveStop(s.id)} hitSlop={10}>
+                      <MaterialCommunityIcons name="bookmark-remove-outline" size={20} color={colors.textFaint} />
+                    </Pressable>
+                  }
+                />
+              ))
+            )
+          ) : savedLines.length === 0 ? (
+            <EmptyState icon="vector-polyline" title={t("saved.emptyLinesTitle")} subtitle={t("saved.emptyLinesSubtitle")} />
+          ) : (
+            savedLines.map((l) => (
+              <LineRow
+                key={l.id}
+                line={l}
+                saved
+                onToggleSave={() => unsaveLine(l.id)}
+                onPress={() => router.push({ pathname: "/(tabs)/map", params: { lineId: l.id } })}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
     </View>
@@ -103,11 +157,24 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 11, fontWeight: "800", letterSpacing: 0.3 },
   title: { fontSize: 30, fontWeight: "800", letterSpacing: -0.5 },
   subtitle: { fontSize: 13, marginTop: 4 },
-  section: { paddingHorizontal: 16, marginTop: 20 },
-  sectionTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 12 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  gridCard: { width: "47%" },
-  gridIcon: { width: 40, height: 40, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  gridLabel: { fontSize: 14, fontWeight: "700" },
-  gridSub: { fontSize: 12, marginTop: 2 },
+  segmentWrap: { paddingHorizontal: 16, marginTop: 20 },
+  segment: {
+    flexDirection: "row",
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    height: 38,
+    borderRadius: 10,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  section: { paddingHorizontal: 16, marginTop: 16 },
 });

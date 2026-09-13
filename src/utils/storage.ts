@@ -20,6 +20,7 @@ export async function setJSON<T>(key: string, value: T): Promise<void> {
 
 export const StorageKeys = {
   savedStops: "peatu:saved-stops",
+  savedLines: "peatu:saved-lines",
   notificationsEnabled: "peatu:notifications-enabled",
   showStopsByDefault: "peatu:map-show-stops",
   mapFilter: "peatu:map-filter",

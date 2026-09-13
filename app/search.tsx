@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import EmptyState from "@/components/EmptyState";
@@ -12,6 +12,7 @@ import { TRANSIT_LINES } from "@/data/lines";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useTheme } from "@/theme/ThemeContext";
 import type { Stop, TransitLine } from "@/types";
+import { StorageKeys, getJSON, setJSON } from "@/utils/storage";
 
 type ResultItem = { kind: "stop"; data: Stop } | { kind: "line"; data: TransitLine };
 
@@ -20,6 +21,18 @@ export default function SearchScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
+  const [savedLineIds, setSavedLineIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    (async () => setSavedLineIds(await getJSON<string[]>(StorageKeys.savedLines, [])))();
+  }, []);
+
+  const toggleSaveLine = async (lineId: string) => {
+    const isSaved = savedLineIds.includes(lineId);
+    const next = isSaved ? savedLineIds.filter((id) => id !== lineId) : [...savedLineIds, lineId];
+    setSavedLineIds(next);
+    await setJSON(StorageKeys.savedLines, next);
+  };
 
   const { stopResults, lineResults } = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -81,7 +94,14 @@ export default function SearchScreen() {
         }
         renderItem={({ item, index }) => {
           if (item.kind === "line") {
-            return <LineRow line={item.data} onPress={() => router.push({ pathname: "/(tabs)/map", params: { lineId: item.data.id } })} />;
+            return (
+              <LineRow
+                line={item.data}
+                saved={savedLineIds.includes(item.data.id)}
+                onToggleSave={() => toggleSaveLine(item.data.id)}
+                onPress={() => router.push({ pathname: "/(tabs)/map", params: { lineId: item.data.id } })}
+              />
+            );
           }
           const isFirstStop = index === lineResults.length;
           return (

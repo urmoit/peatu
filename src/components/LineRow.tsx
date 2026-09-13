@@ -1,11 +1,22 @@
-import { StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Card from "./Card";
 import ModeIcon from "./ModeIcon";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useTheme } from "@/theme/ThemeContext";
 import type { TransitLine } from "@/types";
 
-export default function LineRow({ line, onPress }: { line: TransitLine; onPress: () => void }) {
+export default function LineRow({
+  line,
+  onPress,
+  saved,
+  onToggleSave,
+}: {
+  line: TransitLine;
+  onPress: () => void;
+  saved?: boolean;
+  onToggleSave?: () => void;
+}) {
   const { colors } = useTheme();
   const { t } = useLanguage();
   return (
@@ -26,6 +37,15 @@ export default function LineRow({ line, onPress }: { line: TransitLine; onPress:
             </Text>
           </View>
         </View>
+        {onToggleSave && (
+          <Pressable onPress={onToggleSave} hitSlop={10} style={styles.saveBtn}>
+            <MaterialCommunityIcons
+              name={saved ? "bookmark" : "bookmark-outline"}
+              size={20}
+              color={saved ? colors.primary : colors.textFaint}
+            />
+          </Pressable>
+        )}
       </View>
     </Card>
   );
@@ -74,5 +94,8 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 12,
+  },
+  saveBtn: {
+    paddingLeft: 4,
   },
 });

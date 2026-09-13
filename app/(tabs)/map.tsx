@@ -33,6 +33,19 @@ export default function MapTab() {
   const [filter, setFilter] = useState<(typeof MODE_FILTERS)[number]["key"]>("all");
   const [locating, setLocating] = useState(false);
   const [selectedLineId, setSelectedLineId] = useState<string | undefined>(undefined);
+  const [savedLineIds, setSavedLineIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    (async () => setSavedLineIds(await getJSON<string[]>(StorageKeys.savedLines, [])))();
+  }, []);
+
+  const toggleSaveSelectedLine = async () => {
+    if (!selectedLineId) return;
+    const isSaved = savedLineIds.includes(selectedLineId);
+    const next = isSaved ? savedLineIds.filter((id) => id !== selectedLineId) : [...savedLineIds, selectedLineId];
+    setSavedLineIds(next);
+    await setJSON(StorageKeys.savedLines, next);
+  };
 
   useEffect(() => {
     (async () => {
@@ -115,18 +128,32 @@ export default function MapTab() {
           })}
         </View>
         {selectedLineId && (
-          <Pressable
-            onPress={() => {
-              router.setParams({ lineId: undefined });
-              setSelectedLineId(undefined);
-            }}
-            style={[styles.clearLinePill, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
-          >
-            <MaterialCommunityIcons name="close-circle" size={14} color={colors.textMuted} />
-            <Text style={[styles.clearLineText, { color: colors.textMuted }]}>
-              {TRANSIT_LINES.find((l) => l.id === selectedLineId)?.number}
-            </Text>
-          </Pressable>
+          <View style={styles.lineSelectionRow}>
+            <View style={[styles.clearLinePill, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
+              <Pressable
+                onPress={() => {
+                  router.setParams({ lineId: undefined });
+                  setSelectedLineId(undefined);
+                }}
+                style={styles.clearLinePillTouch}
+              >
+                <MaterialCommunityIcons name="close-circle" size={14} color={colors.textMuted} />
+                <Text style={[styles.clearLineText, { color: colors.textMuted }]}>
+                  {TRANSIT_LINES.find((l) => l.id === selectedLineId)?.number}
+                </Text>
+              </Pressable>
+            </View>
+            <Pressable
+              onPress={toggleSaveSelectedLine}
+              style={[styles.saveLineFab, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
+            >
+              <MaterialCommunityIcons
+                name={savedLineIds.includes(selectedLineId) ? "bookmark" : "bookmark-outline"}
+                size={16}
+                color={savedLineIds.includes(selectedLineId) ? colors.primary : colors.textMuted}
+              />
+            </Pressable>
+          </View>
         )}
       </View>
 
@@ -183,12 +210,30 @@ const styles = StyleSheet.create({
   },
   clearLinePill: {
     alignSelf: "flex-start",
+    borderRadius: 15,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  lineSelectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  clearLinePillTouch: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
     height: 30,
+  },
+  saveLineFab: {
+    width: 30,
+    height: 30,
     borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
     shadowOpacity: 0.1,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
