@@ -1,5 +1,7 @@
 # Peatu — native Expo app
 
+Built by **ChosenTechies**.
+
 This is a full rebuild of your Peatu app as a **real native React Native app**, using
 [Expo Router](https://docs.expo.dev/router/introduction/) with file-based navigation.
 
