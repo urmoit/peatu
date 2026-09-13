@@ -106,7 +106,7 @@ const en = {
   "settings.roadmap": "Roadmap",
   "settings.about": "About",
   "settings.aboutPeatu": "About Peatu",
-  "settings.version": "Version 2.0.0 · Tallinn",
+  "settings.version": "Version 1.0.0 · Tallinn",
   "settings.aboutText":
     "Peatu is a public transport tracker for Tallinn. Timetables come from the official Estonian GTFS feed, map data from OpenStreetMap. Live departures are next on the roadmap.",
   "settings.language": "Language",
@@ -255,7 +255,7 @@ const et: Record<keyof typeof en, string> = {
   "settings.roadmap": "Arenduskava",
   "settings.about": "Rakendusest",
   "settings.aboutPeatu": "Peatust lähemalt",
-  "settings.version": "Versioon 2.0.0 · Tallinn",
+  "settings.version": "Versioon 1.0.0 · Tallinn",
   "settings.aboutText":
     "Peatu on Tallinna ühistranspordi jälgija. Sõiduplaanid pärinevad ametlikust Eesti GTFS-voost, kaardiandmed OpenStreetMapist. Reaalajas väljumised on järgmisena arenduskavas.",
   "settings.language": "Keel",
