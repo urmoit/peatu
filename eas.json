@@ -1,0 +1,38 @@
+{
+  "build": {
+    "development": {
+      "developmentClient": false,
+      "distribution": "store",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EX_PUBLIC_BASE_URL": "https://peatu.ee"
+      }
+    },
+    "preview": {
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EX_PUBLIC_BASE_URL": "https://peatu.ee"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EX_PUBLIC_BASE_URL": "https://peatu.ee"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
