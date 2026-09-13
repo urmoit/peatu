@@ -17,12 +17,12 @@ import { StorageKeys, getJSON, setJSON } from "@/utils/storage";
 
 const TALLINN_CENTER = { lat: 59.437, lng: 24.7536 };
 
-const MODE_FILTERS: { key: "all" | "bus" | "train" | "tram" | "trolley"; labelKey: TranslationKey }[] = [
+const MODE_FILTERS: { key: "all" | "bus" | "train" | "tram" | "ferry"; labelKey: TranslationKey }[] = [
   { key: "all", labelKey: "map.filter.all" },
   { key: "bus", labelKey: "map.filter.bus" },
   { key: "train", labelKey: "map.filter.train" },
   { key: "tram", labelKey: "map.filter.tram" },
-  { key: "trolley", labelKey: "map.filter.trolley" },
+  { key: "ferry", labelKey: "map.filter.ferry" },
 ];
 
 export default function MapTab() {
@@ -60,8 +60,12 @@ export default function MapTab() {
     (async () => {
       const stored = await getJSON(StorageKeys.showStopsByDefault, true);
       setShowStops(stored);
-      const storedFilter = await getJSON<(typeof MODE_FILTERS)[number]["key"]>(StorageKeys.mapFilter, "all");
-      setFilter(storedFilter);
+      const rawFilter = await getJSON<string>(StorageKeys.mapFilter, "all");
+      // "trolley" was folded into "bus" — migrate old stored values.
+      const storedFilter = rawFilter === "trolley" ? "bus" : rawFilter;
+      if (MODE_FILTERS.some((f) => f.key === storedFilter)) {
+        setFilter(storedFilter as (typeof MODE_FILTERS)[number]["key"]);
+      }
     })();
   }, []);
 

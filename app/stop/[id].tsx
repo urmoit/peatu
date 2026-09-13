@@ -65,7 +65,6 @@ export default function StopDetail() {
     () =>
       departures.filter((d) => {
         if (filter === "all") return true;
-        if (filter === "tram") return d.mode === "tram" || d.mode === "trolley";
         return d.mode === filter;
       }),
     [departures, filter]
@@ -177,7 +176,7 @@ export default function StopDetail() {
                     <View style={styles.destinationMeta}>
                       <ModeIcon mode={d.mode} size={12} color={colors.textFaint} />
                       <Text style={[styles.destinationModeText, { color: colors.textFaint }]}>
-                        {t(`mode.${d.mode === "trolley" ? "trolley" : d.mode}` as any)}
+                        {t(`mode.${d.mode}` as TranslationKey)}
                       </Text>
                     </View>
                   </View>

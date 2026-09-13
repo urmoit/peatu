@@ -19,7 +19,7 @@ const MAP_FILTERS = [
   { key: "bus", labelKey: "map.filter.bus" as TranslationKey },
   { key: "train", labelKey: "map.filter.train" as TranslationKey },
   { key: "tram", labelKey: "map.filter.tram" as TranslationKey },
-  { key: "trolley", labelKey: "map.filter.trolley" as TranslationKey },
+  { key: "ferry", labelKey: "map.filter.ferry" as TranslationKey },
 ];
 
 const ROADMAP_KEYS: { titleKey: TranslationKey; detailKey: TranslationKey }[] = [
@@ -28,7 +28,26 @@ const ROADMAP_KEYS: { titleKey: TranslationKey; detailKey: TranslationKey }[] = 
   { titleKey: "roadmap.item3.title", detailKey: "roadmap.item3.detail" },
   { titleKey: "roadmap.item4.title", detailKey: "roadmap.item4.detail" },
   { titleKey: "roadmap.item5.title", detailKey: "roadmap.item5.detail" },
+  { titleKey: "roadmap.item6.title", detailKey: "roadmap.item6.detail" },
+  { titleKey: "roadmap.item7.title", detailKey: "roadmap.item7.detail" },
 ];
+
+function RoadmapIcon({ status }: { status: RoadmapItem["status"] }) {
+  const { colors } = useTheme();
+  const bg =
+    status === "done"
+      ? `${colors.accentGreen}22`
+      : status === "next"
+        ? `${colors.primary}22`
+        : colors.surfaceAlt;
+  const color = status === "done" ? colors.accentGreen : status === "next" ? colors.primary : colors.textFaint;
+  const icon = status === "done" ? "check" : status === "next" ? "rocket-launch-outline" : "clock-outline";
+  return (
+    <View style={[styles.roadmapIcon, { backgroundColor: bg }]}>
+      <MaterialCommunityIcons name={icon} size={18} color={color} />
+    </View>
+  );
+}
 
 function RoadmapBadge({ status }: { status: RoadmapItem["status"] }) {
   const { colors } = useTheme();
@@ -99,7 +118,9 @@ export default function Settings() {
     (async () => {
       setNotifications(await getJSON(StorageKeys.notificationsEnabled, true));
       setShowStops(await getJSON(StorageKeys.showStopsByDefault, true));
-      setMapFilter(await getJSON(StorageKeys.mapFilter, "all"));
+      const rawMapFilter = await getJSON<string>(StorageKeys.mapFilter, "all");
+      // "trolley" was folded into "bus" — migrate old stored values.
+      setMapFilter(rawMapFilter === "trolley" ? "bus" : rawMapFilter);
     })();
   }, []);
 
@@ -278,6 +299,25 @@ export default function Settings() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionLabel, { color: colors.textFaint }]}>{t("settings.roadmap").toUpperCase()}</Text>
+        <View style={styles.roadmapProgressRow}>
+          <Text style={[styles.roadmapProgressText, { color: colors.textMuted }]}>
+            {t("settings.roadmapProgress", {
+              done: ROADMAP.filter((item) => item.status === "done").length,
+              total: ROADMAP.length,
+            })}
+          </Text>
+          <View style={[styles.roadmapProgressTrack, { backgroundColor: colors.surfaceAlt }]}>
+            <View
+              style={[
+                styles.roadmapProgressFill,
+                {
+                  backgroundColor: colors.accentGreen,
+                  width: `${(ROADMAP.filter((item) => item.status === "done").length / ROADMAP.length) * 100}%`,
+                },
+              ]}
+            />
+          </View>
+        </View>
         <Card padding={0}>
           {ROADMAP.map((item, i) => (
             <View
@@ -287,6 +327,7 @@ export default function Settings() {
                 i < ROADMAP.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
               ]}
             >
+              <RoadmapIcon status={item.status} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.rowTitle, { color: colors.text }]}>{t(ROADMAP_KEYS[i].titleKey)}</Text>
                 <Text style={[styles.rowSubtitle, { color: colors.textFaint }]}>{t(ROADMAP_KEYS[i].detailKey)}</Text>
@@ -306,7 +347,7 @@ export default function Settings() {
             <View style={styles.aboutModes}>
               <MaterialCommunityIcons name="bus" size={16} color="#2563EB" />
               <MaterialCommunityIcons name="tram" size={16} color="#16A34A" />
-              <MaterialCommunityIcons name="tram" size={16} color="#CA8A04" />
+              <MaterialCommunityIcons name="ferry" size={16} color="#0891B2" />
             </View>
             <Text style={[styles.aboutText, { color: colors.textFaint }]}>{t("settings.aboutText")}</Text>
           </View>
@@ -330,6 +371,11 @@ const styles = StyleSheet.create({
   filterChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   filterChip: { height: 32, paddingHorizontal: 12, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   roadmapRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
+  roadmapIcon: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  roadmapProgressRow: { marginBottom: 12, gap: 8 },
+  roadmapProgressText: { fontSize: 12, fontWeight: "700" },
+  roadmapProgressTrack: { height: 8, borderRadius: 4, overflow: "hidden" },
+  roadmapProgressFill: { height: 8, borderRadius: 4 },
   roadmapBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
   roadmapBadgeText: { fontSize: 10, fontWeight: "800" },
   aboutBody: { paddingHorizontal: 16, paddingBottom: 16 },

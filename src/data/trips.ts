@@ -27,13 +27,13 @@ const DEPARTURES_BY_STOP: Record<string, Departure[]> = {
   ],
   s4: [
     { id: "d1", line: "7", mode: "bus", destination: "Balti Jaam", etaMin: 5 },
-    { id: "d2", line: "4", mode: "trolley", destination: "Mustamäe Keskus", etaMin: 9 },
-    { id: "d3", line: "T2", mode: "trolley", destination: "Vabaduse väljak", etaMin: 13 },
+    { id: "d2", line: "4", mode: "bus", destination: "Mustamäe Keskus", etaMin: 9 },
+    { id: "d3", line: "T2", mode: "bus", destination: "Vabaduse väljak", etaMin: 13 },
     { id: "d4", line: "12", mode: "bus", destination: "Viru Keskus", etaMin: 16 },
   ],
   s9: [
     { id: "d1", line: "5", mode: "bus", destination: "Mustamäe Keskus", etaMin: 2 },
-    { id: "d2", line: "T1", mode: "trolley", destination: "Haabersti", etaMin: 6 },
+    { id: "d2", line: "T1", mode: "bus", destination: "Haabersti", etaMin: 6 },
     { id: "d3", line: "3", mode: "tram", destination: "Tondi", etaMin: 10 },
     { id: "d4", line: "20", mode: "bus", destination: "Pelguranna", etaMin: 14 },
   ],
@@ -100,7 +100,9 @@ export function getRouteById(id: string | undefined | null): RouteOption {
 export const ROADMAP: RoadmapItem[] = [
   { status: "done", title: "Full Tallinn network map", detail: "All 80 TLT lines with real GTFS route shapes" },
   { status: "next", title: "Live departures", detail: "Real-time countdowns per stop (GTFS-RT)" },
-  { status: "next", title: "Trip planner with transfers", detail: "Real routes across bus, tram and trolley" },
+  { status: "next", title: "Trip planner with transfers", detail: "Real routes across bus, tram and train" },
+  { status: "next", title: "Train connections", detail: "Full Elron network with stations and schedules" },
+  { status: "next", title: "Ferry connections", detail: "Harbour ferries, including Tallinn–Helsinki" },
   { status: "later", title: "Service alerts", detail: "Disruptions, detours and stop closures" },
   { status: "later", title: "More cities", detail: "Tartu, Pärnu and the rest of Estonia" },
 ];

@@ -2,7 +2,7 @@ export const modeColors = {
   bus: { bg: "#EFF6FF", bgDark: "#0B2559", text: "#2563EB", textDark: "#60A5FA" },
   train: { bg: "#F0FDF4", bgDark: "#0B3B22", text: "#16A34A", textDark: "#4ADE80" },
   tram: { bg: "#FEFCE8", bgDark: "#3B310B", text: "#CA8A04", textDark: "#FACC15" },
-  trolley: { bg: "#FEFCE8", bgDark: "#3B310B", text: "#CA8A04", textDark: "#FACC15" },
+  ferry: { bg: "#ECFEFF", bgDark: "#083344", text: "#0891B2", textDark: "#22D3EE" },
   walk: { bg: "#F3F4F6", bgDark: "#1F2430", text: "#6B7280", textDark: "#9CA3AF" },
 } as const;
 

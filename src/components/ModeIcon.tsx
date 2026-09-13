@@ -5,7 +5,7 @@ const ICONS: Record<TransitMode, React.ComponentProps<typeof MaterialCommunityIc
   bus: "bus",
   train: "train",
   tram: "tram",
-  trolley: "tram",
+  ferry: "ferry",
   walk: "walk",
 };
 
