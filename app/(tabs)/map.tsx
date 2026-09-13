@@ -2,9 +2,12 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Card from "@/components/Card";
 import CustomMap, { type CustomMapHandle } from "@/components/CustomMap";
+import LineRow from "@/components/LineRow";
+import ModeBadge from "@/components/ModeBadge";
 import { STOPS } from "@/data/stops";
 import { TRANSIT_LINES } from "@/data/lines";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -33,6 +36,7 @@ export default function MapTab() {
   const [filter, setFilter] = useState<(typeof MODE_FILTERS)[number]["key"]>("all");
   const [locating, setLocating] = useState(false);
   const [selectedLineId, setSelectedLineId] = useState<string | undefined>(undefined);
+  const [tappedStopId, setTappedStopId] = useState<string | undefined>(undefined);
   const [savedLineIds, setSavedLineIds] = useState<string[]>([]);
   const [stopsHiddenByZoom, setStopsHiddenByZoom] = useState(true);
 
@@ -40,12 +44,16 @@ export default function MapTab() {
     (async () => setSavedLineIds(await getJSON<string[]>(StorageKeys.savedLines, [])))();
   }, []);
 
-  const toggleSaveSelectedLine = async () => {
-    if (!selectedLineId) return;
-    const isSaved = savedLineIds.includes(selectedLineId);
-    const next = isSaved ? savedLineIds.filter((id) => id !== selectedLineId) : [...savedLineIds, selectedLineId];
+  const toggleSaveLine = async (lineId: string) => {
+    const isSaved = savedLineIds.includes(lineId);
+    const next = isSaved ? savedLineIds.filter((id) => id !== lineId) : [...savedLineIds, lineId];
     setSavedLineIds(next);
     await setJSON(StorageKeys.savedLines, next);
+  };
+
+  const toggleSaveSelectedLine = async () => {
+    if (!selectedLineId) return;
+    await toggleSaveLine(selectedLineId);
   };
 
   useEffect(() => {
@@ -61,6 +69,7 @@ export default function MapTab() {
     useCallback(() => {
       if (params.lineId) {
         setSelectedLineId(params.lineId);
+        setTappedStopId(undefined);
         setShowLines(true);
         const line = TRANSIT_LINES.find((l) => l.id === params.lineId);
         if (line) setFilter(line.mode as typeof filter);
@@ -90,9 +99,32 @@ export default function MapTab() {
   };
 
   const visibleStops = showStops ? STOPS.filter((s) => (filter === "all" ? true : s.modes.includes(filter))) : [];
-  const visibleLines = showLines
-    ? TRANSIT_LINES.filter((l) => (filter === "all" ? true : l.mode === filter))
-    : [];
+
+  // Only ever draw what the user explicitly asked for: a selected line, or the
+  // lines serving a tapped stop. Nothing is shown by default.
+  const tappedStop = tappedStopId ? STOPS.find((s) => s.id === tappedStopId) : undefined;
+  const linesThroughTappedStop = tappedStop ? TRANSIT_LINES.filter((l) => l.stopIds.includes(tappedStop.id)) : [];
+  const selectedLine = selectedLineId ? TRANSIT_LINES.find((l) => l.id === selectedLineId) : undefined;
+  const visibleLines = !showLines ? [] : selectedLine ? [selectedLine] : tappedStop ? linesThroughTappedStop : [];
+
+  const handleStopPress = (id: string) => {
+    router.setParams({ lineId: undefined });
+    setSelectedLineId(undefined);
+    setTappedStopId(id);
+    setShowLines(true);
+  };
+
+  const handleSelectLine = (lineId: string) => {
+    const line = TRANSIT_LINES.find((l) => l.id === lineId);
+    setTappedStopId(undefined);
+    setSelectedLineId(lineId);
+    setShowLines(true);
+    if (line) {
+      setFilter(line.mode as typeof filter);
+      setJSON(StorageKeys.mapFilter, line.mode);
+    }
+    router.setParams({ lineId });
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -104,7 +136,8 @@ export default function MapTab() {
         zoom={13}
         interactive
         selectedLineId={selectedLineId}
-        onStopPress={(id) => router.push(`/stop/${id}`)}
+        selectedStopId={tappedStopId}
+        onStopPress={handleStopPress}
         onMarkersVisibilityChange={(visible) => setStopsHiddenByZoom(!visible)}
       />
 
@@ -118,6 +151,7 @@ export default function MapTab() {
                 onPress={() => {
                   setFilter(f.key);
                   setSelectedLineId(undefined);
+                  setTappedStopId(undefined);
                   setJSON(StorageKeys.mapFilter, f.key);
                 }}
                 style={[styles.filterChip, active && { backgroundColor: colors.text }]}
@@ -168,7 +202,57 @@ export default function MapTab() {
         </View>
       )}
 
-      <View style={[styles.actionsCol, { bottom: insets.bottom + 24 }]} pointerEvents="box-none">
+      {tappedStop && !selectedLineId && (
+        <View style={[styles.stopSheetWrap, { bottom: insets.bottom + 16 }]} pointerEvents="box-none">
+          <Card padding={0} style={styles.stopSheet}>
+            <View style={styles.stopSheetHeader}>
+              <ModeBadge mode={tappedStop.modes[0]} size="md" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.stopSheetTitle, { color: colors.text }]} numberOfLines={1}>
+                  {tappedStop.name}
+                </Text>
+                <Text style={[styles.stopSheetMeta, { color: colors.textFaint }]} numberOfLines={1}>
+                  {tappedStop.area} · {tappedStop.distance}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setTappedStopId(undefined)}
+                hitSlop={10}
+                style={[styles.stopSheetClose, { backgroundColor: colors.surfaceAlt }]}
+              >
+                <MaterialCommunityIcons name="close" size={18} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <Text style={[styles.stopSheetSection, { color: colors.textMuted }]}>
+              {t("search.linesSection").toUpperCase()} · {linesThroughTappedStop.length}
+            </Text>
+            {linesThroughTappedStop.length === 0 ? (
+              <Text style={[styles.stopSheetEmpty, { color: colors.textFaint }]}>{t("map.noLinesAtStop")}</Text>
+            ) : (
+              <ScrollView style={styles.stopSheetList} showsVerticalScrollIndicator={false}>
+                {linesThroughTappedStop.map((line) => (
+                  <LineRow
+                    key={line.id}
+                    line={line}
+                    saved={savedLineIds.includes(line.id)}
+                    onToggleSave={() => toggleSaveLine(line.id)}
+                    onPress={() => handleSelectLine(line.id)}
+                  />
+                ))}
+              </ScrollView>
+            )}
+            <Pressable onPress={() => router.push(`/stop/${tappedStop.id}`)} style={styles.stopSheetFooter} hitSlop={8}>
+              <Text style={[styles.stopSheetFooterText, { color: colors.primary }]}>{t("map.stopDetails")}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={16} color={colors.primary} />
+            </Pressable>
+          </Card>
+        </View>
+      )}
+
+      <View
+        style={[styles.actionsCol, { bottom: tappedStop && !selectedLineId ? insets.bottom + 356 : insets.bottom + 24 }]}
+        pointerEvents="box-none"
+      >
         <Pressable
           onPress={() => setShowLines((v) => !v)}
           style={[styles.fab, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
@@ -255,6 +339,61 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 16,
     gap: 10,
+  },
+  stopSheetWrap: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+  },
+  stopSheet: {
+    padding: 16,
+    maxHeight: 340,
+  },
+  stopSheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 12,
+  },
+  stopSheetTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  stopSheetMeta: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  stopSheetClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stopSheetSection: {
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    marginBottom: 8,
+  },
+  stopSheetList: {
+    maxHeight: 168,
+  },
+  stopSheetEmpty: {
+    fontSize: 13,
+    textAlign: "center",
+    paddingVertical: 12,
+  },
+  stopSheetFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingTop: 12,
+  },
+  stopSheetFooterText: {
+    fontSize: 13,
+    fontWeight: "700",
   },
   fab: {
     width: 46,

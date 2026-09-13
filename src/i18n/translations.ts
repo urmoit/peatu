@@ -65,6 +65,8 @@ const en = {
   "map.filter.tram": "Tram",
   "map.filter.trolley": "Trolley",
   "map.zoomToSeeStops": "Zoom in to see stops",
+  "map.stopDetails": "Stop details",
+  "map.noLinesAtStop": "No lines serve this stop in our data yet",
 
   "saved.title": "Saved",
   "saved.subtitle": "Quick access to your favorite stops",
@@ -214,6 +216,8 @@ const et: Record<keyof typeof en, string> = {
   "map.filter.tram": "Tramm",
   "map.filter.trolley": "Troll",
   "map.zoomToSeeStops": "Suumi peatuste nägemiseks",
+  "map.stopDetails": "Peatuse üksikasjad",
+  "map.noLinesAtStop": "Meie andmetes ei peatu siin veel ühtegi liini",
 
   "saved.title": "Salvestatud",
   "saved.subtitle": "Kiire ligipääs lemmikpeatustele",
