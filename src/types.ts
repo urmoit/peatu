@@ -54,4 +54,13 @@ export interface RoadmapItem {
   detail: string;
 }
 
+export interface TransitLine {
+  id: string;
+  number: string;
+  mode: TransitMode;
+  name: string;
+  color: string;
+  stopIds: string[];
+}
+
 export type ThemeMode = "light" | "dark";

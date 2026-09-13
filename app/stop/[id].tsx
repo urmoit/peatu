@@ -10,6 +10,7 @@ import LineBadge from "@/components/LineBadge";
 import ModeBadge from "@/components/ModeBadge";
 import ModeIcon from "@/components/ModeIcon";
 import { getStopById, SAVED_STOP_IDS_DEFAULT } from "@/data/stops";
+import { TRANSIT_LINES } from "@/data/lines";
 import { getDeparturesForStop } from "@/data/trips";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { modeColors } from "@/theme/colors";
@@ -32,6 +33,7 @@ export default function StopDetail() {
   const insets = useSafeAreaInsets();
   const stop = getStopById(id);
   const departures = getDeparturesForStop(stop.id);
+  const linesThroughStop = TRANSIT_LINES.filter((l) => l.stopIds.includes(stop.id));
   const [filter, setFilter] = useState<"all" | TransitMode>("all");
   const [saved, setSaved] = useState(false);
 
@@ -75,8 +77,9 @@ export default function StopDetail() {
       <View style={styles.hero}>
         <CustomMap
           stops={[stop]}
+          lines={linesThroughStop}
           center={{ lat: stop.lat, lng: stop.lng }}
-          zoom={15}
+          zoom={14}
           interactive={false}
           selectedStopId={stop.id}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}

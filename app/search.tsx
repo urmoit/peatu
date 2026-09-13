@@ -4,10 +4,16 @@ import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import EmptyState from "@/components/EmptyState";
+import LineRow from "@/components/LineRow";
+import SectionHeader from "@/components/SectionHeader";
 import StopRow from "@/components/StopRow";
 import { STOPS } from "@/data/stops";
+import { TRANSIT_LINES } from "@/data/lines";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useTheme } from "@/theme/ThemeContext";
+import type { Stop, TransitLine } from "@/types";
+
+type ResultItem = { kind: "stop"; data: Stop } | { kind: "line"; data: TransitLine };
 
 export default function SearchScreen() {
   const { colors } = useTheme();
@@ -15,13 +21,22 @@ export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
 
-  const results = useMemo(() => {
+  const { stopResults, lineResults } = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return STOPS;
-    return STOPS.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.area.toLowerCase().includes(q)
-    );
+    const stops = q
+      ? STOPS.filter((s) => s.name.toLowerCase().includes(q) || s.area.toLowerCase().includes(q))
+      : STOPS;
+    const lines = q
+      ? TRANSIT_LINES.filter((l) => l.number.toLowerCase() === q || l.number.toLowerCase().includes(q) || l.name.toLowerCase().includes(q))
+      : [];
+    return { stopResults: stops, lineResults: lines };
   }, [query]);
+
+  const items: ResultItem[] = useMemo(() => {
+    const lineItems: ResultItem[] = lineResults.map((l) => ({ kind: "line", data: l }));
+    const stopItems: ResultItem[] = stopResults.map((s) => ({ kind: "stop", data: s }));
+    return [...lineItems, ...stopItems];
+  }, [stopResults, lineResults]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
@@ -48,23 +63,43 @@ export default function SearchScreen() {
       </View>
 
       <Text style={[styles.resultsCount, { color: colors.textFaint }]}>
-        {t("search.resultsCount", { count: results.length })}
+        {t("search.resultsCount", { count: stopResults.length })}
       </Text>
 
       <FlatList
-        data={results}
-        keyExtractor={(item) => item.id}
+        data={items}
+        keyExtractor={(item) => `${item.kind}-${item.data.id}`}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 24 }}
         keyboardShouldPersistTaps="handled"
         initialNumToRender={16}
-        renderItem={({ item }) => (
-          <StopRow
-            stop={item}
-            onPress={() => {
-              router.replace(`/stop/${item.id}`);
-            }}
-          />
-        )}
+        ListHeaderComponent={
+          lineResults.length > 0 ? (
+            <View style={{ marginBottom: 4 }}>
+              <SectionHeader title={t("search.linesSection")} />
+            </View>
+          ) : null
+        }
+        renderItem={({ item, index }) => {
+          if (item.kind === "line") {
+            return <LineRow line={item.data} onPress={() => router.push({ pathname: "/(tabs)/map", params: { lineId: item.data.id } })} />;
+          }
+          const isFirstStop = index === lineResults.length;
+          return (
+            <View>
+              {isFirstStop && lineResults.length > 0 && (
+                <View style={{ marginTop: 8, marginBottom: 4 }}>
+                  <SectionHeader title={t("search.stopsSection")} />
+                </View>
+              )}
+              <StopRow stop={item.data} onPress={() => router.replace(`/stop/${item.data.id}`)} />
+            </View>
+          );
+        }}
+        ListFooterComponent={
+          lineResults.length > 0 ? (
+            <Text style={[styles.note, { color: colors.textFaint }]}>{t("search.sampleLinesNote")}</Text>
+          ) : null
+        }
         ListEmptyComponent={
           <EmptyState
             icon="map-marker-off-outline"
@@ -110,6 +145,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  note: {
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 8,
     marginBottom: 8,
   },
 });

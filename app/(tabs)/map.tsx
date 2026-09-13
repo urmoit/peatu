@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CustomMap, { type CustomMapHandle } from "@/components/CustomMap";
 import { STOPS } from "@/data/stops";
+import { TRANSIT_LINES } from "@/data/lines";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useTheme } from "@/theme/ThemeContext";
 import type { TranslationKey } from "@/i18n/translations";
@@ -25,10 +26,13 @@ export default function MapTab() {
   const { colors } = useTheme();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ lineId?: string }>();
   const mapRef = useRef<CustomMapHandle>(null);
   const [showStops, setShowStops] = useState(true);
+  const [showLines, setShowLines] = useState(true);
   const [filter, setFilter] = useState<(typeof MODE_FILTERS)[number]["key"]>("all");
   const [locating, setLocating] = useState(false);
+  const [selectedLineId, setSelectedLineId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     (async () => {
@@ -38,6 +42,17 @@ export default function MapTab() {
       setFilter(storedFilter);
     })();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (params.lineId) {
+        setSelectedLineId(params.lineId);
+        setShowLines(true);
+        const line = TRANSIT_LINES.find((l) => l.id === params.lineId);
+        if (line) setFilter(line.mode as typeof filter);
+      }
+    }, [params.lineId])
+  );
 
   const toggleStops = () => {
     const next = !showStops;
@@ -61,15 +76,20 @@ export default function MapTab() {
   };
 
   const visibleStops = showStops ? STOPS.filter((s) => (filter === "all" ? true : s.modes.includes(filter))) : [];
+  const visibleLines = showLines
+    ? TRANSIT_LINES.filter((l) => (filter === "all" ? true : l.mode === filter))
+    : [];
 
   return (
     <View style={{ flex: 1 }}>
       <CustomMap
         ref={mapRef}
         stops={visibleStops}
+        lines={visibleLines}
         center={TALLINN_CENTER}
         zoom={13}
         interactive
+        selectedLineId={selectedLineId}
         onStopPress={(id) => router.push(`/stop/${id}`)}
       />
 
@@ -82,6 +102,7 @@ export default function MapTab() {
                 key={f.key}
                 onPress={() => {
                   setFilter(f.key);
+                  setSelectedLineId(undefined);
                   setJSON(StorageKeys.mapFilter, f.key);
                 }}
                 style={[styles.filterChip, active && { backgroundColor: colors.text }]}
@@ -93,9 +114,29 @@ export default function MapTab() {
             );
           })}
         </View>
+        {selectedLineId && (
+          <Pressable
+            onPress={() => {
+              router.setParams({ lineId: undefined });
+              setSelectedLineId(undefined);
+            }}
+            style={[styles.clearLinePill, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
+          >
+            <MaterialCommunityIcons name="close-circle" size={14} color={colors.textMuted} />
+            <Text style={[styles.clearLineText, { color: colors.textMuted }]}>
+              {TRANSIT_LINES.find((l) => l.id === selectedLineId)?.number}
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={[styles.actionsCol, { bottom: insets.bottom + 24 }]} pointerEvents="box-none">
+        <Pressable
+          onPress={() => setShowLines((v) => !v)}
+          style={[styles.fab, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
+        >
+          <MaterialCommunityIcons name="vector-polyline" size={20} color={showLines ? colors.primary : colors.textMuted} />
+        </Pressable>
         <Pressable onPress={toggleStops} style={[styles.fab, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
           <MaterialCommunityIcons
             name={showStops ? "map-marker-multiple" : "map-marker-multiple-outline"}
@@ -121,6 +162,7 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     top: 0,
+    gap: 8,
   },
   filterScroll: {
     flexDirection: "row",
@@ -139,6 +181,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  clearLinePill: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 30,
+    borderRadius: 15,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  clearLineText: { fontSize: 12, fontWeight: "700" },
   actionsCol: {
     position: "absolute",
     right: 16,

@@ -76,7 +76,7 @@ src/
 ## What changed in this update
 
 - **No more Google Maps.** The Map tab and the stop-detail mini map now use a custom
-  Leaflet-based map (`src/components/CustomMap.tsx` + `src/utils/leafletHtml.ts`) rendered
+  Leaflet-based map (`src/components/CustomMap.tsx` + `src/utils/mapHtml.ts`) rendered
   in a small scoped `WebView`, using free OpenStreetMap/CARTO tiles — the same engine your
   original app used, with **no API key, no billing, and no native map SDK config**. This is
   the only WebView left in the app, and it's just for map tiles, not the whole UI. Markers,
@@ -99,23 +99,39 @@ src/
 
 ## Notes on the map
 
-- Tiles come from **OpenStreetMap's own tile server** (`tile.openstreetmap.org`) — free,
-  keyless, single domain. CARTO's free basemap tiles (which the previous build used)
-  started requiring a paid API key partway through this project, so they were dropped
-  entirely rather than shipping something that degrades later. Dark mode is done with a
-  CSS filter on the tile layer (OSM only serves one light style for free) rather than a
-  second tile provider.
-- The map sets an explicit `strict-origin-when-cross-origin` referrer policy and gives the
-  WebView a real `https://` base URL, both required by OSM's tile usage policy — without
-  them some networks/carriers will silently drop the tile requests.
-- OSM's tile server is explicitly meant for **light/moderate use**, not high-traffic
-  production apps — see `operations.osmfoundation.org/policies/tiles`. That's the right fit
-  here; if this app ever gets real production traffic, switching to a paid provider
-  (MapTiler, Thunderforest, Stadia, or CARTO with a key) is a five-minute change — just the
-  one `TILE_URL` constant in `src/utils/leafletHtml.ts`.
-- Marker taps navigate to the stop detail screen; the "locate me" button asks for location
-  permission and flies the map to your position with a blue dot. The map also auto-fits its
-  initial view to whatever markers are visible, instead of a fixed zoom level.
+- **Engine swapped to MapLibre GL JS + OpenFreeMap.** Raster tiles (Leaflet, CARTO, plain
+  OSM PNGs) don't restyle themselves per app theme — you'd need a different provider or a
+  CSS filter hack for dark mode, and free raster providers keep adding API keys (see below).
+  MapLibre renders a real **vector** style, so light/dark is just `map.setStyle(...)` to a
+  different style URL, with the exact same crisp cartography either way.
+- **Tiles/styles come from [OpenFreeMap](https://openfreemap.org)** — free, keyless,
+  unlimited, no accounts, explicitly built for production use (it's been MapHub's basemap
+  service since 2024). Light mode uses their `liberty` style; dark mode uses their `dark`
+  style, which is a maintained fork of the same `dark-matter` style family used by most
+  "dark mode transit map" apps (including the reference screenshot) — same visual language:
+  near-black background, subtle grey streets, muted place labels.
+- Earlier builds used CARTO's free raster basemaps; CARTO started requiring a paid API key
+  on that endpoint partway through this project, and the raw OSM raster fallback needs a
+  real referrer/origin to satisfy their usage policy from inside a WebView with no natural
+  origin — both are handled (`baseUrl` on the WebView source, `referrer` meta tag) but
+  vector tiles from OpenFreeMap sidestep the whole problem.
+- The map auto-fits its view to whatever's visible (all stops, or a single selected line),
+  and re-measures itself after mount to dodge Android's "container reports zero size on
+  first paint" WebView quirk.
+
+## Transit lines (new)
+
+- `src/data/lines.ts` adds a small, hand-picked set of **illustrative** route shapes (a few
+  trams, trolleybuses, and buses) connecting real stops from `src/data/stops.ts`, rendered
+  as colored lines on the map — similar to the route line in the reference screenshot.
+- **This is not the full official network.** Tallinn has roughly 80 real lines; there's no
+  live GTFS shapes feed wired into this app, so fabricating all of them with accurate paths
+  isn't possible here. The 10 sample lines exist to show the feature working end-to-end
+  (map rendering, search, tap-to-highlight) — swapping in real shapes later just means
+  replacing the contents of that one file with parsed GTFS `shapes.txt` data.
+- Search now has a **Lines** section above **Stops** — matches by line number or route
+  name. Tapping a line jumps to the Map tab, fits the view to that line, and dims every
+  other line so it stands out.
 
 ## Visual pass (onboarding / home / saved)
 

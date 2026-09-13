@@ -4,8 +4,8 @@ import WebView, { type WebViewMessageEvent } from "react-native-webview";
 import { STOPS } from "@/data/stops";
 import { modeColors } from "@/theme/colors";
 import { useTheme } from "@/theme/ThemeContext";
-import type { Stop } from "@/types";
-import { buildMapHtml, markerFromStop, type MapMarkerData } from "@/utils/leafletHtml";
+import type { Stop, TransitLine } from "@/types";
+import { buildMapHtml, lineToMapLineData, markerFromStop, type MapMarkerData } from "@/utils/mapHtml";
 
 export interface CustomMapHandle {
   flyTo: (lat: number, lng: number, zoom?: number) => void;
@@ -14,10 +14,12 @@ export interface CustomMapHandle {
 
 interface CustomMapProps {
   stops?: Stop[];
+  lines?: TransitLine[];
   center: { lat: number; lng: number };
   zoom?: number;
   interactive?: boolean;
   selectedStopId?: string;
+  selectedLineId?: string;
   onStopPress?: (id: string) => void;
   style?: object;
 }
@@ -28,7 +30,17 @@ function colorForStop(stop: Stop, themeMode: "light" | "dark") {
 }
 
 const CustomMap = forwardRef<CustomMapHandle, CustomMapProps>(function CustomMap(
-  { stops = STOPS, center, zoom = 13, interactive = true, selectedStopId, onStopPress, style },
+  {
+    stops = STOPS,
+    lines = [],
+    center,
+    zoom = 13,
+    interactive = true,
+    selectedStopId,
+    selectedLineId,
+    onStopPress,
+    style,
+  },
   ref
 ) {
   const { mode: themeMode } = useTheme();
@@ -38,6 +50,7 @@ const CustomMap = forwardRef<CustomMapHandle, CustomMapProps>(function CustomMap
     () => stops.map((s) => markerFromStop(s, colorForStop(s, themeMode))),
     [stops, themeMode]
   );
+  const mapLines = useMemo(() => lines.map(lineToMapLineData), [lines]);
 
   useImperativeHandle(ref, () => ({
     flyTo: (lat, lng, flyZoom) => {
@@ -50,13 +63,20 @@ const CustomMap = forwardRef<CustomMapHandle, CustomMapProps>(function CustomMap
     },
   }));
 
-  // Push marker updates without a full reload so pan/zoom position is preserved.
+  // Push marker/line updates without a full reload so pan/zoom state is preserved.
   const markersRef = useRef<string>("");
   const nextMarkersJson = JSON.stringify(markers);
   if (markersRef.current && markersRef.current !== nextMarkersJson) {
     webviewRef.current?.injectJavaScript(`window.setMarkers && window.setMarkers(${nextMarkersJson}); true;`);
   }
   markersRef.current = nextMarkersJson;
+
+  const linesRef = useRef<string>("");
+  const nextLinesJson = JSON.stringify(mapLines);
+  if (linesRef.current && linesRef.current !== nextLinesJson) {
+    webviewRef.current?.injectJavaScript(`window.setLines && window.setLines(${nextLinesJson}); true;`);
+  }
+  linesRef.current = nextLinesJson;
 
   const prevTheme = useRef(themeMode);
   if (prevTheme.current !== themeMode) {
@@ -72,12 +92,15 @@ const CustomMap = forwardRef<CustomMapHandle, CustomMapProps>(function CustomMap
         theme: themeMode,
         interactive,
         markers,
+        lines: mapLines,
         selectedId: selectedStopId,
+        selectedLineId,
       }),
-    // Only rebuild the whole document on first mount / interactivity or center changes;
-    // marker + theme updates go through injectJavaScript above.
+    // Only rebuild the whole document on first mount / interactivity, center, or
+    // selected-line changes (those need a fresh fitBounds pass); marker/line/theme
+    // updates otherwise go through injectJavaScript above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [interactive]
+    [interactive, selectedLineId]
   );
 
   const onMessage = (event: WebViewMessageEvent) => {

@@ -98,7 +98,7 @@ export function getRouteById(id: string | undefined | null): RouteOption {
 }
 
 export const ROADMAP: RoadmapItem[] = [
-  { status: "done", title: "Full Tallinn network map", detail: "All 80 lines with real street-following shapes" },
+  { status: "next", title: "Full Tallinn network map", detail: "All ~80 lines with real GTFS route shapes (currently a small sample set)" },
   { status: "next", title: "Live departures", detail: "Real-time countdowns per stop (GTFS-RT)" },
   { status: "next", title: "Trip planner with transfers", detail: "Real routes across bus, tram and trolley" },
   { status: "later", title: "Service alerts", detail: "Disruptions, detours and stop closures" },
