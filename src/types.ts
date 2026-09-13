@@ -61,6 +61,12 @@ export interface TransitLine {
   name: string;
   color: string;
   stopIds: string[];
+  /** Real GTFS platform count for the route (may exceed stopIds, which only
+   * links to the hand-curated stops in src/data/stops.ts). */
+  stopCount?: number;
+  /** Real route polylines (usually inbound + outbound). When present, the map
+   * renders these instead of straight stop-to-stop segments. */
+  shapes?: { lat: number; lng: number }[][];
 }
 
 export type ThemeMode = "light" | "dark";

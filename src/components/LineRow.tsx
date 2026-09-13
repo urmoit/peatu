@@ -33,7 +33,7 @@ export default function LineRow({
           <View style={styles.metaRow}>
             <ModeIcon mode={line.mode} size={12} color={colors.textFaint} />
             <Text style={[styles.meta, { color: colors.textFaint }]}>
-              {t("search.resultsCount", { count: line.stopIds.length })}
+              {t("search.resultsCount", { count: line.stopCount ?? line.stopIds.length })}
             </Text>
           </View>
         </View>

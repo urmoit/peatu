@@ -16,9 +16,9 @@ import { StorageKeys, getJSON, setJSON } from "@/utils/storage";
 
 const MAP_FILTERS = [
   { key: "all", labelKey: "map.filter.all" as TranslationKey },
-  { key: "frequent", labelKey: "map.filter.bus" as TranslationKey },
-  { key: "regular", labelKey: "map.filter.train" as TranslationKey },
-  { key: "local", labelKey: "map.filter.tram" as TranslationKey },
+  { key: "bus", labelKey: "map.filter.bus" as TranslationKey },
+  { key: "train", labelKey: "map.filter.train" as TranslationKey },
+  { key: "tram", labelKey: "map.filter.tram" as TranslationKey },
   { key: "trolley", labelKey: "map.filter.trolley" as TranslationKey },
 ];
 

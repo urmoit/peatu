@@ -1,5 +1,5 @@
 import type { Stop, TransitLine } from "@/types";
-import { lineCoordinates } from "@/data/lines";
+import { lineCoordinates, lineShapePolylines } from "@/data/lines";
 
 export interface MapMarkerData {
   id: string;
@@ -42,6 +42,18 @@ export function lineToMapLineData(line: TransitLine): MapLineData {
     color: line.color,
     coordinates: lineCoordinates(line).map((c) => [c.lng, c.lat]),
   };
+}
+
+/** One MapLineData per shape polyline (usually inbound + outbound share the
+ * same id/color, so selection dimming and fitBounds treat them as one line). */
+export function lineToMapLineDatas(line: TransitLine): MapLineData[] {
+  return lineShapePolylines(line)
+    .filter((poly) => poly.length >= 2)
+    .map((poly) => ({
+      id: line.id,
+      color: line.color,
+      coordinates: poly.map((c) => [c.lng, c.lat] as [number, number]),
+    }));
 }
 
 export function buildMapHtml(opts: {

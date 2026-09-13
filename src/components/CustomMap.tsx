@@ -5,7 +5,7 @@ import { STOPS } from "@/data/stops";
 import { modeColors } from "@/theme/colors";
 import { useTheme } from "@/theme/ThemeContext";
 import type { Stop, TransitLine } from "@/types";
-import { buildMapHtml, lineToMapLineData, markerFromStop, type MapMarkerData } from "@/utils/mapHtml";
+import { buildMapHtml, lineToMapLineDatas, markerFromStop, type MapMarkerData } from "@/utils/mapHtml";
 
 export interface CustomMapHandle {
   flyTo: (lat: number, lng: number, zoom?: number) => void;
@@ -58,7 +58,7 @@ const CustomMap = forwardRef<CustomMapHandle, CustomMapProps>(function CustomMap
     () => stops.map((s) => markerFromStop(s, colorForStop(s, themeMode))),
     [stops, themeMode]
   );
-  const mapLines = useMemo(() => lines.map(lineToMapLineData), [lines]);
+  const mapLines = useMemo(() => lines.flatMap(lineToMapLineDatas), [lines]);
 
   useImperativeHandle(ref, () => ({
     flyTo: (lat, lng, flyZoom) => {
