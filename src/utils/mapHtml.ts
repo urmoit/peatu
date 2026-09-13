@@ -53,12 +53,18 @@ export function buildMapHtml(opts: {
   lines?: MapLineData[];
   selectedId?: string;
   selectedLineId?: string;
+  /** Stops stay hidden until the map is zoomed to at least this level, so a
+   * city-wide view shows just route lines instead of dozens of overlapping
+   * pins. Pass `alwaysShowMarkers` to bypass this (e.g. a single-stop preview). */
+  minMarkerZoom?: number;
+  alwaysShowMarkers?: boolean;
 }) {
   const { center, zoom, theme, interactive } = opts;
   const markersJson = JSON.stringify(opts.markers);
   const linesJson = JSON.stringify(opts.lines ?? []);
   const selectedId = JSON.stringify(opts.selectedId ?? null);
   const selectedLineId = JSON.stringify(opts.selectedLineId ?? null);
+  const minMarkerZoom = opts.alwaysShowMarkers ? -Infinity : opts.minMarkerZoom ?? 14;
 
   return `<!DOCTYPE html>
 <html>
@@ -91,12 +97,20 @@ export function buildMapHtml(opts: {
     //     finish loading within a few seconds.
     // ---------------------------------------------------------------------
     var GLYPHS = ${JSON.stringify(GLYPH_SVG)};
-    var THEME = '${theme}';
+    // Mutable, not a frozen constant: if the app's theme resolves (e.g. from
+    // AsyncStorage) to something different shortly after this page is first
+    // built, window.setTheme() below updates this immediately regardless of
+    // whether either map engine has finished booting yet. Both boot paths
+    // read this at init time rather than closing over the original value, so
+    // a "dark" that arrives mid-boot isn't silently dropped.
+    var pendingTheme = '${theme}';
     var INTERACTIVE = ${interactive};
     var CENTER = { lat: ${center.lat}, lng: ${center.lng} };
     var ZOOM = ${zoom};
     var SELECTED_ID = ${selectedId};
     var SELECTED_LINE_ID = ${selectedLineId};
+    var MIN_MARKER_ZOOM = ${minMarkerZoom};
+    var markersShown = false;
     var state = { markers: ${markersJson}, lines: ${linesJson} };
     var engine = null; // 'maplibre' | 'leaflet'
 
@@ -131,6 +145,11 @@ export function buildMapHtml(opts: {
     function notifyStopPress(id) {
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'stopPress', id: id }));
+      }
+    }
+    function notifyMarkersVisibility(visible) {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markersVisibility', visible: visible }));
       }
     }
 
@@ -179,6 +198,15 @@ export function buildMapHtml(opts: {
       state.lines = lines;
       if (ml.map && ml.map.isStyleLoaded()) mlAddLineLayers(lines);
     }
+    function mlRefreshMarkerVisibility() {
+      if (!ml.map) return;
+      var shouldShow = ml.map.getZoom() >= MIN_MARKER_ZOOM;
+      if (shouldShow === markersShown) return;
+      markersShown = shouldShow;
+      if (shouldShow) mlSetMarkers(state.markers);
+      else mlClearMarkers();
+      notifyMarkersVisibility(shouldShow);
+    }
     function mlSetTheme(theme) {
       if (!ml.map) return;
       ml.map.setStyle(theme === 'dark' ? 'https://tiles.openfreemap.org/styles/dark' : 'https://tiles.openfreemap.org/styles/liberty');
@@ -219,7 +247,7 @@ export function buildMapHtml(opts: {
       try {
         ml.map = new maplibregl.Map({
           container: 'map',
-          style: THEME === 'dark' ? 'https://tiles.openfreemap.org/styles/dark' : 'https://tiles.openfreemap.org/styles/liberty',
+          style: pendingTheme === 'dark' ? 'https://tiles.openfreemap.org/styles/dark' : 'https://tiles.openfreemap.org/styles/liberty',
           center: [CENTER.lng, CENTER.lat],
           zoom: ZOOM,
           attributionControl: false,
@@ -229,6 +257,7 @@ export function buildMapHtml(opts: {
           interactive: INTERACTIVE
         });
         ml.map.on('error', function () { onFail(); });
+        ml.map.on('zoomend', mlRefreshMarkerVisibility);
         ml.map.on('load', function () {
           ml.ready = true;
           onReady();
@@ -270,6 +299,15 @@ export function buildMapHtml(opts: {
     function llSetLines(lines) {
       state.lines = lines;
       if (ll.map) llRenderLines(lines);
+    }
+    function llRefreshMarkerVisibility() {
+      if (!ll.map) return;
+      var shouldShow = ll.map.getZoom() >= MIN_MARKER_ZOOM;
+      if (shouldShow === markersShown) return;
+      markersShown = shouldShow;
+      if (shouldShow) llRenderMarkers(state.markers);
+      else ll.markerLayer.clearLayers();
+      notifyMarkersVisibility(shouldShow);
     }
     function llSetTheme(theme) {
       var pane = document.querySelector('.leaflet-tile-pane');
@@ -321,12 +359,13 @@ export function buildMapHtml(opts: {
         referrerPolicy: 'strict-origin-when-cross-origin'
       }).addTo(ll.map);
       ll.markerLayer = L.layerGroup().addTo(ll.map);
-      llSetTheme(THEME);
-      llRenderMarkers(state.markers);
+      llSetTheme(pendingTheme);
       llRenderLines(state.lines);
+      ll.map.on('zoomend', llRefreshMarkerVisibility);
       setTimeout(function () {
         ll.map.invalidateSize();
         llFitInitial();
+        llRefreshMarkerVisibility();
       }, 150);
     }
 
@@ -357,9 +396,9 @@ export function buildMapHtml(opts: {
             if (fellBack) return;
             clearTimeout(timer);
             engine = 'maplibre';
-            mlSetMarkers(state.markers);
             mlAddLineLayers(state.lines);
             mlFitInitial();
+            mlRefreshMarkerVisibility();
           },
           function onFail() {
             if (fellBack) return;
@@ -375,6 +414,7 @@ export function buildMapHtml(opts: {
 
     window.setMarkers = function (list) {
       state.markers = list;
+      if (!markersShown) return; // stays hidden until zoomed in enough
       if (engine === 'maplibre') mlSetMarkers(list);
       else if (engine === 'leaflet') llSetMarkers(list);
     };
@@ -384,8 +424,11 @@ export function buildMapHtml(opts: {
       else state.lines = lines;
     };
     window.setTheme = function (theme) {
+      pendingTheme = theme;
       if (engine === 'maplibre') mlSetTheme(theme);
       else if (engine === 'leaflet') llSetTheme(theme);
+      // If neither engine is ready yet, pendingTheme is picked up by
+      // whichever one boots (see initMapLibre/initLeaflet above).
     };
     window.flyToLocation = function (lat, lng, zoom) {
       if (engine === 'maplibre') mlFlyTo(lat, lng, zoom);

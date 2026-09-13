@@ -64,6 +64,7 @@ const en = {
   "map.filter.train": "Train",
   "map.filter.tram": "Tram",
   "map.filter.trolley": "Trolley",
+  "map.zoomToSeeStops": "Zoom in to see stops",
 
   "saved.title": "Saved",
   "saved.subtitle": "Quick access to your favorite stops",
@@ -212,6 +213,7 @@ const et: Record<keyof typeof en, string> = {
   "map.filter.train": "Rong",
   "map.filter.tram": "Tramm",
   "map.filter.trolley": "Troll",
+  "map.zoomToSeeStops": "Suumi peatuste nägemiseks",
 
   "saved.title": "Salvestatud",
   "saved.subtitle": "Kiire ligipääs lemmikpeatustele",

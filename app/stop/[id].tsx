@@ -91,6 +91,7 @@ export default function StopDetail() {
           center={{ lat: stop.lat, lng: stop.lng }}
           zoom={14}
           interactive={false}
+          alwaysShowMarkers
           selectedStopId={stop.id}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         />

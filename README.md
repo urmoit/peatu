@@ -117,6 +117,29 @@ src/
 - The map auto-fits to whatever's visible (all stops, or a single selected line + its
   route), and both engines re-measure after mount to dodge WebView container sizing races.
 
+## Stops now hide until you zoom in
+
+A city-wide view with 70+ overlapping stop pins was unreadable — you couldn't see the route
+lines under them, and finding a specific stop meant hunting through a pile of icons. Stops
+now stay hidden until the map is zoomed to street level (zoom 14+); route lines are always
+visible at any zoom. A small "Zoom in to see stops" pill appears while they're hidden. This
+applies to both map engines and to manual pan/zoom, filter changes, and line selection
+(selecting a line zooms in far enough that its stops appear automatically). The stop-detail
+mini-map is exempt — it's always just the one relevant stop, not clutter.
+
+## Fixed: map ignoring dark mode on launch
+
+If you'd explicitly chosen dark mode before (saved to AsyncStorage) but your system theme
+is light, the app's very first render briefly reports "light" (`useColorScheme()` resolves
+synchronously; the saved preference loads a moment later via an async `AsyncStorage.getItem`
+call). That's normally invisible, but the map's WebView used to bake in whatever theme was
+current at that first instant, and the follow-up "switch to dark" message could arrive
+*before* the Leaflet/MapLibre CDN scripts finished downloading — a bridge call with nothing
+on the other end yet to receive it, silently dropped. Net effect: dark app chrome around a
+map that stayed in light colors. Both engines now read a live, mutable theme value at the
+moment they actually finish booting rather than one frozen at page-creation time, so a
+theme change that arrives mid-boot is picked up instead of lost.
+
 ## Saved tab (redesigned)
 
 - Now has two segments — **Stops** and **Lines** — instead of one flat list plus a generic

@@ -34,6 +34,7 @@ export default function MapTab() {
   const [locating, setLocating] = useState(false);
   const [selectedLineId, setSelectedLineId] = useState<string | undefined>(undefined);
   const [savedLineIds, setSavedLineIds] = useState<string[]>([]);
+  const [stopsHiddenByZoom, setStopsHiddenByZoom] = useState(true);
 
   useEffect(() => {
     (async () => setSavedLineIds(await getJSON<string[]>(StorageKeys.savedLines, [])))();
@@ -104,6 +105,7 @@ export default function MapTab() {
         interactive
         selectedLineId={selectedLineId}
         onStopPress={(id) => router.push(`/stop/${id}`)}
+        onMarkersVisibilityChange={(visible) => setStopsHiddenByZoom(!visible)}
       />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
@@ -156,6 +158,15 @@ export default function MapTab() {
           </View>
         )}
       </View>
+
+      {showStops && stopsHiddenByZoom && (
+        <View style={[styles.zoomHintWrap, { top: insets.top + 58 }]} pointerEvents="none">
+          <View style={[styles.zoomHintPill, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
+            <MaterialCommunityIcons name="magnify-plus-outline" size={14} color={colors.textMuted} />
+            <Text style={[styles.zoomHintText, { color: colors.textMuted }]}>{t("map.zoomToSeeStops")}</Text>
+          </View>
+        </View>
+      )}
 
       <View style={[styles.actionsCol, { bottom: insets.bottom + 24 }]} pointerEvents="box-none">
         <Pressable
@@ -263,5 +274,27 @@ const styles = StyleSheet.create({
   attributionText: {
     fontSize: 9,
     color: "rgba(107,114,128,0.9)",
+  },
+  zoomHintWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  zoomHintPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 30,
+    borderRadius: 15,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  zoomHintText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

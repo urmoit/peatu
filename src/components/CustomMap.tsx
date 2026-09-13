@@ -21,7 +21,12 @@ interface CustomMapProps {
   selectedStopId?: string;
   selectedLineId?: string;
   onStopPress?: (id: string) => void;
+  onMarkersVisibilityChange?: (visible: boolean) => void;
   style?: object;
+  /** Stops stay hidden until zoomed in this far (default 14). Pass true to
+   * always show them regardless of zoom (e.g. a single-stop preview). */
+  alwaysShowMarkers?: boolean;
+  minMarkerZoom?: number;
 }
 
 function colorForStop(stop: Stop, themeMode: "light" | "dark") {
@@ -39,7 +44,10 @@ const CustomMap = forwardRef<CustomMapHandle, CustomMapProps>(function CustomMap
     selectedStopId,
     selectedLineId,
     onStopPress,
+    onMarkersVisibilityChange,
     style,
+    alwaysShowMarkers = false,
+    minMarkerZoom,
   },
   ref
 ) {
@@ -95,12 +103,14 @@ const CustomMap = forwardRef<CustomMapHandle, CustomMapProps>(function CustomMap
         lines: mapLines,
         selectedId: selectedStopId,
         selectedLineId,
+        alwaysShowMarkers,
+        minMarkerZoom,
       }),
     // Only rebuild the whole document on first mount / interactivity, center, or
     // selected-line changes (those need a fresh fitBounds pass); marker/line/theme
     // updates otherwise go through injectJavaScript above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [interactive, selectedLineId]
+    [interactive, selectedLineId, alwaysShowMarkers]
   );
 
   const onMessage = (event: WebViewMessageEvent) => {
@@ -108,6 +118,8 @@ const CustomMap = forwardRef<CustomMapHandle, CustomMapProps>(function CustomMap
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === "stopPress" && data.id) {
         onStopPress?.(data.id);
+      } else if (data.type === "markersVisibility") {
+        onMarkersVisibilityChange?.(!!data.visible);
       }
     } catch {
       // ignore malformed messages
