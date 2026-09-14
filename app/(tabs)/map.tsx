@@ -6,10 +6,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Card from "@/components/Card";
 import CustomMap, { type CustomMapHandle } from "@/components/CustomMap";
+import LineBadge from "@/components/LineBadge";
 import LineRow from "@/components/LineRow";
 import ModeBadge from "@/components/ModeBadge";
 import { STOPS } from "@/data/stops";
 import { TRANSIT_LINES } from "@/data/lines";
+import { getDeparturesForStop } from "@/data/trips";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useTheme } from "@/theme/ThemeContext";
 import type { TranslationKey } from "@/i18n/translations";
@@ -104,12 +106,13 @@ export default function MapTab() {
 
   const visibleStops = showStops ? STOPS.filter((s) => (filter === "all" ? true : s.modes.includes(filter))) : [];
 
-  // Only ever draw what the user explicitly asked for: a selected line, or the
-  // lines serving a tapped stop. Nothing is shown by default.
+  // Only draw the explicitly selected line. Tapping a stop opens its sheet
+  // (departures + lines) without painting every line on the map.
   const tappedStop = tappedStopId ? STOPS.find((s) => s.id === tappedStopId) : undefined;
   const linesThroughTappedStop = tappedStop ? TRANSIT_LINES.filter((l) => l.stopIds.includes(tappedStop.id)) : [];
+  const previewDepartures = tappedStop ? getDeparturesForStop(tappedStop.id).slice(0, 4) : [];
   const selectedLine = selectedLineId ? TRANSIT_LINES.find((l) => l.id === selectedLineId) : undefined;
-  const visibleLines = !showLines ? [] : selectedLine ? [selectedLine] : tappedStop ? linesThroughTappedStop : [];
+  const visibleLines = !showLines || !selectedLine ? [] : [selectedLine];
 
   const handleStopPress = (id: string) => {
     router.setParams({ lineId: undefined });
@@ -228,6 +231,30 @@ export default function MapTab() {
               </Pressable>
             </View>
             <Text style={[styles.stopSheetSection, { color: colors.textMuted }]}>
+              {t("map.liveDepartures").toUpperCase()}
+            </Text>
+            {previewDepartures.length === 0 ? (
+              <Text style={[styles.stopSheetEmpty, { color: colors.textFaint }]}>{t("stop.noDepartures")}</Text>
+            ) : (
+              <View style={styles.depList}>
+                {previewDepartures.map((d) => (
+                  <View key={d.id} style={styles.depRow}>
+                    <Text style={[styles.depEta, { color: d.etaMin <= 5 ? colors.primary : colors.text }]}>
+                      {d.etaMin} {t("stop.min")}
+                    </Text>
+                    <LineBadge line={d.line} mode={d.mode} size="sm" />
+                    <Text style={[styles.depDest, { color: colors.textMuted }]} numberOfLines={1}>
+                      {d.destination}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <Pressable onPress={() => router.push(`/stop/${tappedStop.id}`)} style={styles.viewMoreBtn} hitSlop={8}>
+              <Text style={[styles.viewMoreText, { color: colors.primary }]}>{t("map.viewMore")}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={16} color={colors.primary} />
+            </Pressable>
+            <Text style={[styles.stopSheetSection, { color: colors.textMuted }]}>
               {t("search.linesSection").toUpperCase()} · {linesThroughTappedStop.length}
             </Text>
             {linesThroughTappedStop.length === 0 ? (
@@ -245,16 +272,12 @@ export default function MapTab() {
                 ))}
               </ScrollView>
             )}
-            <Pressable onPress={() => router.push(`/stop/${tappedStop.id}`)} style={styles.stopSheetFooter} hitSlop={8}>
-              <Text style={[styles.stopSheetFooterText, { color: colors.primary }]}>{t("map.stopDetails")}</Text>
-              <MaterialCommunityIcons name="chevron-right" size={16} color={colors.primary} />
-            </Pressable>
           </Card>
         </View>
       )}
 
       <View
-        style={[styles.actionsCol, { bottom: tappedStop && !selectedLineId ? insets.bottom + 356 : insets.bottom + 24 }]}
+        style={[styles.actionsCol, { bottom: tappedStop && !selectedLineId ? insets.bottom + 458 : insets.bottom + 24 }]}
         pointerEvents="box-none"
       >
         <Pressable
@@ -351,7 +374,7 @@ const styles = StyleSheet.create({
   },
   stopSheet: {
     padding: 16,
-    maxHeight: 340,
+    maxHeight: 430,
   },
   stopSheetHeader: {
     flexDirection: "row",
@@ -381,21 +404,40 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stopSheetList: {
-    maxHeight: 168,
+    maxHeight: 150,
   },
   stopSheetEmpty: {
     fontSize: 13,
     textAlign: "center",
     paddingVertical: 12,
   },
-  stopSheetFooter: {
+  depList: {
+    gap: 2,
+  },
+  depRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 5,
+  },
+  depEta: {
+    width: 52,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  depDest: {
+    flex: 1,
+    fontSize: 13,
+  },
+  viewMoreBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    paddingTop: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
   },
-  stopSheetFooterText: {
+  viewMoreText: {
     fontSize: 13,
     fontWeight: "700",
   },

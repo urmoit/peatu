@@ -67,6 +67,8 @@ const en = {
   "map.zoomToSeeStops": "Zoom in to see stops",
   "map.stopDetails": "Stop details",
   "map.noLinesAtStop": "No lines serve this stop in our data yet",
+  "map.liveDepartures": "Live departures",
+  "map.viewMore": "View more",
 
   "saved.title": "Saved",
   "saved.subtitle": "Quick access to your favorite stops",
@@ -223,6 +225,8 @@ const et: Record<keyof typeof en, string> = {
   "map.zoomToSeeStops": "Suumi peatuste nägemiseks",
   "map.stopDetails": "Peatuse üksikasjad",
   "map.noLinesAtStop": "Meie andmetes ei peatu siin veel ühtegi liini",
+  "map.liveDepartures": "Reaalajas väljumised",
+  "map.viewMore": "Vaata rohkem",
 
   "saved.title": "Salvestatud",
   "saved.subtitle": "Kiire ligipääs lemmikpeatustele",
