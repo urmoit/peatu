@@ -24,6 +24,7 @@ export default function StopRow({
   const primaryMode = stop.modes[0];
   const accent = themeMode === "dark" ? modeColors[primaryMode].textDark : modeColors[primaryMode].text;
   const isSoon = etaLabel !== undefined && Number(etaLabel) <= 5;
+  const meta = [stop.area, distanceLabel ?? stop.distance].filter(Boolean).join(" · ");
 
   return (
     <Card onPress={onPress} padding={0} style={styles.card}>
@@ -35,7 +36,7 @@ export default function StopRow({
             {stop.name}
           </Text>
           <Text style={[styles.meta, { color: colors.textFaint }]} numberOfLines={1}>
-            {stop.area} · {distanceLabel ?? stop.distance}
+            {meta}
           </Text>
           {stop.modes.length > 1 && (
             <View style={styles.modesRow}>

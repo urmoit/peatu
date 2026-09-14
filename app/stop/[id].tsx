@@ -12,7 +12,7 @@ import ModeBadge from "@/components/ModeBadge";
 import ModeIcon from "@/components/ModeIcon";
 import { getStopById, SAVED_STOP_IDS_DEFAULT } from "@/data/stops";
 import { TRANSIT_LINES } from "@/data/lines";
-import { getDeparturesForStop } from "@/data/trips";
+import { getDeparturesForStop } from "@/utils/departures";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { modeColors } from "@/theme/colors";
 import { useTheme } from "@/theme/ThemeContext";
@@ -123,7 +123,7 @@ export default function StopDetail() {
                   {stop.name}
                 </Text>
                 <Text style={[styles.stopMeta, { color: colors.textFaint }]}>
-                  {stop.area} · {stop.distance} {t("stop.away")}
+                  {[stop.area, stop.distance ? `${stop.distance} ${t("stop.away")}` : ""].filter(Boolean).join(" · ")}
                 </Text>
               </View>
               <Pressable onPress={openInMaps} style={[styles.navBtn, { backgroundColor: heroBg }]}>

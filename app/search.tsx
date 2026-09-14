@@ -34,15 +34,22 @@ export default function SearchScreen() {
     await setJSON(StorageKeys.savedLines, next);
   };
 
-  const { stopResults, lineResults } = useMemo(() => {
+  const { stopResults, lineResults, totalStopMatches } = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const stops = q
-      ? STOPS.filter((s) => s.name.toLowerCase().includes(q) || s.area.toLowerCase().includes(q))
-      : STOPS;
-    const lines = q
-      ? TRANSIT_LINES.filter((l) => l.number.toLowerCase() === q || l.number.toLowerCase().includes(q) || l.name.toLowerCase().includes(q))
-      : [];
-    return { stopResults: stops, lineResults: lines };
+    if (!q) return { stopResults: STOPS.slice(0, 40), lineResults: [], totalStopMatches: STOPS.length };
+    const matched = STOPS.filter((s) => s.name.toLowerCase().includes(q) || s.area.toLowerCase().includes(q));
+    const rank = (s: Stop) => {
+      const name = s.name.toLowerCase();
+      if (name === q) return 0;
+      if (name.startsWith(q)) return 1;
+      if (name.includes(q)) return 2;
+      return 3;
+    };
+    matched.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+    const lines = TRANSIT_LINES.filter(
+      (l) => l.number.toLowerCase() === q || l.number.toLowerCase().includes(q) || l.name.toLowerCase().includes(q)
+    );
+    return { stopResults: matched.slice(0, 60), lineResults: lines, totalStopMatches: matched.length };
   }, [query]);
 
   const items: ResultItem[] = useMemo(() => {
@@ -76,7 +83,7 @@ export default function SearchScreen() {
       </View>
 
       <Text style={[styles.resultsCount, { color: colors.textFaint }]}>
-        {t("search.resultsCount", { count: stopResults.length })}
+        {t("search.resultsCount", { count: totalStopMatches })}
       </Text>
 
       <FlatList

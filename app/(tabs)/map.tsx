@@ -11,7 +11,7 @@ import LineRow from "@/components/LineRow";
 import ModeBadge from "@/components/ModeBadge";
 import { STOPS } from "@/data/stops";
 import { TRANSIT_LINES } from "@/data/lines";
-import { getDeparturesForStop } from "@/data/trips";
+import { getDeparturesForStop } from "@/utils/departures";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useTheme } from "@/theme/ThemeContext";
 import type { TranslationKey } from "@/i18n/translations";
@@ -219,7 +219,7 @@ export default function MapTab() {
                   {tappedStop.name}
                 </Text>
                 <Text style={[styles.stopSheetMeta, { color: colors.textFaint }]} numberOfLines={1}>
-                  {tappedStop.area} · {tappedStop.distance}
+                  {[tappedStop.area, tappedStop.distance].filter(Boolean).join(" · ")}
                 </Text>
               </View>
               <Pressable

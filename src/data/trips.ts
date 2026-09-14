@@ -1,4 +1,4 @@
-import type { Departure, RecentTrip, RoadmapItem, RouteOption } from "@/types";
+import type { RecentTrip, RoadmapItem, RouteOption } from "@/types";
 
 export const RECENT_TRIPS: RecentTrip[] = [
   { id: "r1", from: "Viru Keskus", to: "Mustamäe Keskus", duration: "22 min", modes: ["walk", "bus", "walk"] },
@@ -7,48 +7,6 @@ export const RECENT_TRIPS: RecentTrip[] = [
   { id: "r4", from: "Kullo", to: "Vabaduse väljak", duration: "10 min", modes: ["walk", "bus"] },
   { id: "r5", from: "Tallinn Lennujaam", to: "Balti Jaam", duration: "18 min", modes: ["bus", "walk"] },
 ];
-
-const DEPARTURES_BY_STOP: Record<string, Departure[]> = {
-  s1: [
-    { id: "d1", line: "3", mode: "bus", destination: "Mustamäe Keskus", etaMin: 4 },
-    { id: "d2", line: "1", mode: "tram", destination: "Kadaka", etaMin: 7 },
-    { id: "d3", line: "5", mode: "bus", destination: "Haabersti", etaMin: 12 },
-    { id: "d4", line: "2", mode: "tram", destination: "Suur-Paala", etaMin: 15 },
-    { id: "d5", line: "36", mode: "bus", destination: "Pelguranna", etaMin: 18 },
-    { id: "d6", line: "67", mode: "bus", destination: "Rocca al Mare", etaMin: 22 },
-    { id: "d7", line: "4", mode: "tram", destination: "Tondi", etaMin: 25 },
-  ],
-  s2: [
-    { id: "d1", line: "P1", mode: "train", destination: "Nõmme Keskus", etaMin: 3 },
-    { id: "d2", line: "8", mode: "bus", destination: "Vana-Pääsküla", etaMin: 8 },
-    { id: "d3", line: "1", mode: "tram", destination: "Kadaka", etaMin: 11 },
-    { id: "d4", line: "P2", mode: "train", destination: "Laagri", etaMin: 14 },
-    { id: "d5", line: "40", mode: "bus", destination: "Pelguranna", etaMin: 17 },
-  ],
-  s4: [
-    { id: "d1", line: "7", mode: "bus", destination: "Balti Jaam", etaMin: 5 },
-    { id: "d2", line: "4", mode: "bus", destination: "Mustamäe Keskus", etaMin: 9 },
-    { id: "d3", line: "T2", mode: "bus", destination: "Vabaduse väljak", etaMin: 13 },
-    { id: "d4", line: "12", mode: "bus", destination: "Viru Keskus", etaMin: 16 },
-  ],
-  s9: [
-    { id: "d1", line: "5", mode: "bus", destination: "Mustamäe Keskus", etaMin: 2 },
-    { id: "d2", line: "T1", mode: "bus", destination: "Haabersti", etaMin: 6 },
-    { id: "d3", line: "3", mode: "tram", destination: "Tondi", etaMin: 10 },
-    { id: "d4", line: "20", mode: "bus", destination: "Pelguranna", etaMin: 14 },
-  ],
-  default: [
-    { id: "d1", line: "5", mode: "bus", destination: "Viru Keskus", etaMin: 6 },
-    { id: "d2", line: "1", mode: "tram", destination: "Kadaka", etaMin: 11 },
-    { id: "d3", line: "3", mode: "bus", destination: "Mustamäe Keskus", etaMin: 14 },
-    { id: "d4", line: "67", mode: "bus", destination: "Rocca al Mare", etaMin: 19 },
-    { id: "d5", line: "P1", mode: "train", destination: "Nõmme Keskus", etaMin: 24 },
-  ],
-};
-
-export function getDeparturesForStop(stopId: string): Departure[] {
-  return DEPARTURES_BY_STOP[stopId] ?? DEPARTURES_BY_STOP.default;
-}
 
 export const ROUTE_OPTIONS: RouteOption[] = [
   {
